@@ -1,0 +1,9 @@
+[package]
+name = "radiation-counter-api"
+version = "0.1.0"
+authors = ["BH Cho <byunghoon.cho@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1.2"
+rust-i2c = { path = "../../../kubos/hal/rust-hal/rust-i2c" }
