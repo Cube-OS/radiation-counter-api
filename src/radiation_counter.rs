@@ -71,6 +71,16 @@ pub trait CuavaRadiationCounter {
     /// This command provides the user with the current communications watchdog
     /// timeout that has been set. The returned value is indicated in minutes.
     fn get_comms_watchdog_period(&self) -> CounterResult<u8>;
+    
+    /// Set Power Status
+    ///
+    /// This can be changed to manually turn on/off the radiation counter
+    fn set_power_status(&mut self, status: bool) -> CounterResult<()>;
+    
+    /// Get Power Status
+    ///
+    /// This command provides the user with the current power status
+    fn get_power_status(&self) -> CounterResult<bool>;
 
     /// Issue Raw Command
     ///
@@ -82,6 +92,7 @@ pub trait CuavaRadiationCounter {
 /// required for commanding and requesting telemetry from the radiation counter device.
 pub struct RadiationCounter {
     connection: Connection,
+    power_status: bool,
 }
 
 impl RadiationCounter {
@@ -94,7 +105,10 @@ impl RadiationCounter {
     ///
     /// [`Connection`]: ../rust_i2c/struct.Connection.html
     pub fn new(connection: Connection) -> Self {
-        RadiationCounter { connection }
+        RadiationCounter {
+            connection: connection,
+            power_status: true
+        }
     }
 }
 
@@ -206,6 +220,23 @@ impl CuavaRadiationCounter for RadiationCounter {
             rx_len,
             Duration::from_millis(2),
         )?)
+    }
+    
+    /// Set Power Status
+    ///
+    /// This can be changed to manually turn on/off the radiation counter
+    fn set_power_status(&mut self, status: bool) -> CounterResult<()> {
+        self.power_status = status;
+        // Call power API to set power
+//         set_single_output(channel: power_channel, value: if status {1} else {0}, delay: 0);
+        Ok(())
+    }
+    
+    /// Get Power Status
+    ///
+    /// This command provides the user with the current power status
+    fn get_power_status(&self) -> CounterResult<bool> {
+        Ok(self.power_status)
     }
 
     /// Issue Raw Command
