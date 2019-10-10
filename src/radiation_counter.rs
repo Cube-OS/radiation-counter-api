@@ -3,7 +3,8 @@ use crate::telemetry;
 use crate::CounterResult;
 use rust_i2c::{Command, Connection};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::io::Error;
 
 // Observed (but undocumented) inter-command delay required is 59ms
 // Rounding up to an even 60
@@ -65,7 +66,7 @@ pub trait CuavaRadiationCounter {
     /// # Arguments
     /// `period` - Watchdog period to set in minutes
     fn set_comms_watchdog_period(&self, period: u8) -> CounterResult<()>;
-
+    
     /// Get Communications Watchdog Period
     ///
     /// This command provides the user with the current communications watchdog
@@ -81,11 +82,16 @@ pub trait CuavaRadiationCounter {
     ///
     /// This command provides the user with the current power status
     fn get_power_status(&self) -> CounterResult<bool>;
-
+    
     /// Issue Raw Command
     ///
     /// This command sends a raw command to the Radiation Counter
     fn raw_command(&self, cmd: u8, data: Vec<u8>) -> CounterResult<()>;
+    
+    /// Get Radiation Counter Value
+    ///
+    /// This command uses i2c to get the value from the Radiation Counter
+    fn get_radiation_count(&self) -> CounterResult<(Duration, u8)>;
 }
 
 /// Radiation Counter structure containing low level connection and functionality
@@ -246,5 +252,24 @@ impl CuavaRadiationCounter for RadiationCounter {
         thread::sleep(INTER_COMMAND_DELAY);
         self.connection.write(Command { cmd, data })?;
         Ok(())
+    }
+    
+    /// Get Radiation Counter Value
+    ///
+    /// This command uses i2c to get the value from the Radiation Counter
+    fn get_radiation_count(&self) -> CounterResult<(Duration, u8)> {
+        let count_request = Command {
+            cmd: 0x01,
+            data: vec![],
+        };
+        
+        let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 2, Duration::from_millis(3));
+        match count_result {
+            Ok(count) => {
+                let now: Duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                Ok((now, count[0]))
+            },
+            Err(e) => Err(e.into()),
+        }
     }
 }
