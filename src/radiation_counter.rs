@@ -6,7 +6,7 @@ use rust_i2c::{Command, Connection};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::io::Error;
-use gomspace_p31u_api::*;
+// use gomspace_p31u_api::*;
 
 // Observed (but undocumented) inter-command delay required is 59ms
 // Rounding up to an even 60
@@ -93,10 +93,10 @@ pub trait CuavaRadiationCounter {
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the value from the Radiation Counter
-    fn get_radiation_count(&self) -> CounterResult<(Duration, u8)>;
+    fn get_radiation_count(&mut self) -> CounterResult<(Duration, u8)>;
     
     /// Get housekeeping data
-    fn get_housekeeping(&self) -> CounterResult<RCHk>;
+    fn get_housekeeping(&mut self) -> CounterResult<RCHk>;
 }
 
 /// Radiation Counter structure containing low level connection and functionality
@@ -104,6 +104,8 @@ pub trait CuavaRadiationCounter {
 pub struct RadiationCounter {
     connection: Connection,
     power_status: bool,
+    timestamps: Vec<i32>,
+    readings: Vec<i32>,
 }
 
 impl RadiationCounter {
@@ -118,7 +120,9 @@ impl RadiationCounter {
     pub fn new(connection: Connection) -> Self {
         RadiationCounter {
             connection: connection,
-            power_status: true
+            power_status: true,
+            timestamps: vec![],
+            readings: vec![]
         }
     }
 }
@@ -262,7 +266,7 @@ impl CuavaRadiationCounter for RadiationCounter {
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the value from the Radiation Counter
-    fn get_radiation_count(&self) -> CounterResult<(Duration, u8)> {
+    fn get_radiation_count(&mut self) -> CounterResult<(Duration, u8)> {
         let count_request = Command {
             cmd: 0x01,
             data: vec![],
@@ -271,21 +275,28 @@ impl CuavaRadiationCounter for RadiationCounter {
         let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 2, Duration::from_millis(3));
         match count_result {
             Ok(count) => {
+                let reading = count[0];
                 let now: Duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-                Ok((now, count[0]))
+                self.timestamps.push(now.as_secs() as i32);
+                self.readings.push(reading as i32);
+                Ok((now, reading))
             },
             Err(e) => Err(e.into()),
         }
     }
     
     /// Get housekeeping data
-    fn get_housekeeping(&self) -> CounterResult<RCHk> {
-        let mut data = RCHk {
+    fn get_housekeeping(&mut self) -> CounterResult<RCHk> {
+        // TODO: Get actual power values
+        let data = RCHk {
             voltage: 5,
             current: 2,
-            timestamps: vec![1, 2, 3, 4],
-            readings: vec![10, 20, 5, 10],
+            timestamps: self.timestamps.clone(),
+            readings: self.readings.clone(),
         };
+        // Remove readings once retrieved
+        self.timestamps.clear();
+        self.readings.clear();
         Ok(data)
     }
 }
