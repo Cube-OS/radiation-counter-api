@@ -1,6 +1,7 @@
 use crate::commands::*;
 use crate::telemetry;
 use crate::CounterResult;
+use crate::objects::RCHk;
 use rust_i2c::{Command, Connection};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -93,6 +94,9 @@ pub trait CuavaRadiationCounter {
     ///
     /// This command uses i2c to get the value from the Radiation Counter
     fn get_radiation_count(&self) -> CounterResult<(Duration, u8)>;
+    
+    /// Get housekeeping data
+    fn get_housekeeping(&self) -> CounterResult<RCHk>;
 }
 
 /// Radiation Counter structure containing low level connection and functionality
@@ -272,5 +276,16 @@ impl CuavaRadiationCounter for RadiationCounter {
             },
             Err(e) => Err(e.into()),
         }
+    }
+    
+    /// Get housekeeping data
+    fn get_housekeeping(&self) -> CounterResult<RCHk> {
+        let mut data = RCHk {
+            voltage: 5,
+            current: 2,
+            timestamps: vec![1, 2, 3, 4],
+            readings: vec![10, 20, 5, 10],
+        };
+        Ok(data)
     }
 }

@@ -4,6 +4,7 @@
 mod commands;
 mod radiation_counter;
 mod telemetry;
+mod objects;
 
 /// High level Radiation Counter API functions
 
