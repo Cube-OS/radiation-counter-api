@@ -5,6 +5,7 @@ use rust_i2c::{Command, Connection};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::io::Error;
+use gomspace_p31u_api::*;
 
 // Observed (but undocumented) inter-command delay required is 59ms
 // Rounding up to an even 60
@@ -234,7 +235,7 @@ impl CuavaRadiationCounter for RadiationCounter {
     fn set_power_status(&mut self, status: bool) -> CounterResult<()> {
         self.power_status = status;
         // Call power API to set power
-//         set_single_output(channel: power_channel, value: if status {1} else {0}, delay: 0);
+//         Eps::set_single_output(1, if status {1} else {0}, 0);
         Ok(())
     }
     
