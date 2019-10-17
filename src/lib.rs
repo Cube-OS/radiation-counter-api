@@ -55,6 +55,17 @@ impl CounterError {
     }
 }
 
+impl From<gomspace_p31u_api::EpsError> for CounterError {
+    fn from(error: gomspace_p31u_api::EpsError) -> Self {
+        match error {
+            gomspace_p31u_api::EpsError::GenericError => CounterError::GenericError,
+            gomspace_p31u_api::EpsError::IoError{cause,description} => CounterError::IoError{cause,description},
+            gomspace_p31u_api::EpsError::ConfigError => CounterError::GenericError,
+            gomspace_p31u_api::EpsError::CommandFailure{command} => CounterError::CommandFailure{command},
+        }
+    }
+}
+
 /// Convience converter from io::Error to CounterError
 impl From<io::Error> for CounterError {
     fn from(error: std::io::Error) -> Self {
