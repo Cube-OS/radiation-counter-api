@@ -6,7 +6,6 @@ use rust_i2c::{Command, Connection};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::io::Error;
-// use gomspace_p31u_api::*;
 
 // Observed (but undocumented) inter-command delay required is 59ms
 // Rounding up to an even 60
@@ -75,16 +74,6 @@ pub trait CuavaRadiationCounter {
     /// timeout that has been set. The returned value is indicated in minutes.
     fn get_comms_watchdog_period(&self) -> CounterResult<u8>;
     
-    /// Set Power Status
-    ///
-    /// This can be changed to manually turn on/off the radiation counter
-    fn set_power_status(&mut self, status: bool) -> CounterResult<()>;
-    
-    /// Get Power Status
-    ///
-    /// This command provides the user with the current power status
-    fn get_power_status(&self) -> CounterResult<bool>;
-    
     /// Issue Raw Command
     ///
     /// This command sends a raw command to the Radiation Counter
@@ -103,7 +92,6 @@ pub trait CuavaRadiationCounter {
 /// required for commanding and requesting telemetry from the radiation counter device.
 pub struct RadiationCounter {
     connection: Connection,
-    power_status: bool,
     timestamps: Vec<i32>,
     readings: Vec<i32>,
 }
@@ -120,7 +108,6 @@ impl RadiationCounter {
     pub fn new(connection: Connection) -> Self {
         RadiationCounter {
             connection: connection,
-            power_status: true,
             timestamps: vec![],
             readings: vec![]
         }
@@ -128,6 +115,7 @@ impl RadiationCounter {
 }
 
 impl CuavaRadiationCounter for RadiationCounter {
+    // TODO: REMOVE
     /// Get Last Error
     ///
     /// If an error has been generated after attempting to execute a user's command,
@@ -142,6 +130,7 @@ impl CuavaRadiationCounter for RadiationCounter {
         )
     }
 
+    // TODO: REMOVE
     /// Manual Reset
     ///
     /// If required the user can reset the radiation counter.
@@ -163,6 +152,7 @@ impl CuavaRadiationCounter for RadiationCounter {
         Ok(())
     }
 
+    // TODO: REMOVE
     /// Get Telemetry
     ///
     /// This command is used to request telemetry items
@@ -183,10 +173,11 @@ impl CuavaRadiationCounter for RadiationCounter {
         )
     }
     
+    // TODO: REMOVE
     /// Get Reset Telemetry
     ///
     /// This command is used to request telemetry items regarding various
-    /// reset conditions on both the motherboard and daughterboard.
+    /// reset conditions
     ///
     /// # Arguments
     /// `telem_type` - Variant of [`ResetTelemetry::Type`] to request
@@ -236,23 +227,6 @@ impl CuavaRadiationCounter for RadiationCounter {
             Duration::from_millis(2),
         )?)
     }
-    
-    /// Set Power Status
-    ///
-    /// This can be changed to manually turn on/off the radiation counter
-    fn set_power_status(&mut self, status: bool) -> CounterResult<()> {
-        self.power_status = status;
-        // Call power API to set power
-//         Eps::set_single_output(1, if status {1} else {0}, 0);
-        Ok(())
-    }
-    
-    /// Get Power Status
-    ///
-    /// This command provides the user with the current power status
-    fn get_power_status(&self) -> CounterResult<bool> {
-        Ok(self.power_status)
-    }
 
     /// Issue Raw Command
     ///
@@ -287,10 +261,7 @@ impl CuavaRadiationCounter for RadiationCounter {
     
     /// Get housekeeping data
     fn get_housekeeping(&mut self) -> CounterResult<RCHk> {
-        // TODO: Get actual power values
         let data = RCHk {
-            voltage: 5,
-            current: 2,
             timestamps: self.timestamps.clone(),
             readings: self.readings.clone(),
         };
