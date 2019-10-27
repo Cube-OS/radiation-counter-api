@@ -15,12 +15,10 @@ pub enum ErrorCode {
     None = 0x00,
     /// Unknown command received
     UnknownCommand = 0x01,
-    /// Selected channel does not exist
-    BadCounterID = 0x02,
     /// A reset had to occur
-    ResetOccurred = 0x03,
+    ResetOccurred = 0x02,
     /// The command to fetch the last error failed
-    CommandError = 0x04,
+    CommandError = 0x03,
     /// Catch all for future error values
     UnknownError,
 }
@@ -30,9 +28,8 @@ impl ErrorCode {
         match value {
             0x00 => ErrorCode::None,
             0x01 => ErrorCode::UnknownCommand,
-            0x02 => ErrorCode::BadCounterID,
-            0x03 => ErrorCode::ResetOccurred,
-            0x04 => ErrorCode::CommandError,
+            0x02 => ErrorCode::ResetOccurred,
+            0x03 => ErrorCode::CommandError,
             _ => ErrorCode::UnknownError,
         }
     }

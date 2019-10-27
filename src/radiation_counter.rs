@@ -1,15 +1,19 @@
 use crate::commands::*;
-use crate::telemetry;
+// use crate::telemetry;
 use crate::CounterResult;
 use crate::objects::RCHk;
 use rust_i2c::{Command, Connection};
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+// use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use std::io::Error;
 
 // Observed (but undocumented) inter-command delay required is 59ms
 // Rounding up to an even 60
 const INTER_COMMAND_DELAY: Duration = Duration::from_millis(60);
+
+// Number of radiation counters
+const NUM_COUNTERS: i32 = 3;
 
 /// Trait defining expected functionality for CUAVA Radiation Counter
 pub trait CuavaRadiationCounter {
@@ -32,29 +36,6 @@ pub trait CuavaRadiationCounter {
     /// to reset the communications watchdog.
     fn reset_comms_watchdog(&self) -> CounterResult<()>;
     
-    /// Get Telemetry
-    ///
-    /// This command is used to request telemetry items
-    ///
-    /// # Arguments
-    /// `telem_type` - Variant of [`Telemetry::Type`] to request
-    fn get_telemetry(&self, telem_type: telemetry::counter::Type)
-        -> CounterResult<f64>;
-        
-    /// Get Reset Telemetry
-    ///
-    /// This command is used to request telemetry items regarding various
-    /// reset conditions.
-    ///
-    /// # Arguments
-    /// `telem_type` - Variant of [`ResetTelemetry::Type`] to request
-    ///
-    /// [`ResetTelemetry::Type`]: ./ResetTelemetry/enum.Type.html
-    fn get_reset_telemetry(
-        &self,
-        telem_type: telemetry::reset::Type,
-    ) -> CounterResult<u8>;
-    
     /// Set Communications Watchdog Period
     ///
     /// The Communications Watchdog by default has a value of 4 minutes set as
@@ -74,26 +55,30 @@ pub trait CuavaRadiationCounter {
     /// timeout that has been set. The returned value is indicated in minutes.
     fn get_comms_watchdog_period(&self) -> CounterResult<u8>;
     
-    /// Issue Raw Command
-    ///
-    /// This command sends a raw command to the Radiation Counter
-    fn raw_command(&self, cmd: u8, data: Vec<u8>) -> CounterResult<()>;
-    
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the value from the Radiation Counter
-    fn get_radiation_count(&mut self) -> CounterResult<(Duration, u8)>;
+    fn get_radiation_count(&mut self) -> CounterResult<(u8, u8, u8)>;
     
     /// Get housekeeping data
-    fn get_housekeeping(&mut self) -> CounterResult<RCHk>;
+    ///
+    /// Returns the data required for housekeeping
+    fn get_housekeeping(&self) -> CounterResult<RCHk>;
+    
+    /// Swap 30 second blocks
+    ///
+    /// Indicate a new time period so the 30 second blocks are swapped and reset
+    fn swap_30s_block(&mut self, new_timestamp: i32);
 }
 
 /// Radiation Counter structure containing low level connection and functionality
 /// required for commanding and requesting telemetry from the radiation counter device.
 pub struct RadiationCounter {
     connection: Connection,
-    timestamps: Vec<i32>,
-    readings: Vec<i32>,
+    timestamp: i32,
+    cur_sum: i32,
+    sum_30s: i32,
+    prev_sum_30s: i32,
 }
 
 impl RadiationCounter {
@@ -108,14 +93,17 @@ impl RadiationCounter {
     pub fn new(connection: Connection) -> Self {
         RadiationCounter {
             connection: connection,
-            timestamps: vec![],
-            readings: vec![]
+            timestamp: 0,
+            cur_sum: 0,
+            sum_30s: 0,
+            prev_sum_30s: 0,
         }
     }
 }
 
 impl CuavaRadiationCounter for RadiationCounter {
-    // TODO: REMOVE
+    // TODO: record result (OK/Err) from other commands, return that
+    // Or recorded on the RC board, transfer to get last error
     /// Get Last Error
     ///
     /// If an error has been generated after attempting to execute a user's command,
@@ -130,7 +118,6 @@ impl CuavaRadiationCounter for RadiationCounter {
         )
     }
 
-    // TODO: REMOVE
     /// Manual Reset
     ///
     /// If required the user can reset the radiation counter.
@@ -151,51 +138,7 @@ impl CuavaRadiationCounter for RadiationCounter {
         self.connection.write(reset_comms_watchdog::command())?;
         Ok(())
     }
-
-    // TODO: REMOVE
-    /// Get Telemetry
-    ///
-    /// This command is used to request telemetry items
-    ///
-    /// # Arguments
-    /// `telem_type` - Variant of [`Telemetry::Type`] to request
-    fn get_telemetry(
-        &self,
-        telem_type: telemetry::counter::Type,
-    ) -> CounterResult<f64> {
-        thread::sleep(INTER_COMMAND_DELAY);
-        let (command, rx_len) = telemetry::counter::command(telem_type);
-        telemetry::counter::parse(
-            &self
-                .connection
-                .transfer(command, rx_len, Duration::from_millis(20))?,
-            telem_type,
-        )
-    }
     
-    // TODO: REMOVE
-    /// Get Reset Telemetry
-    ///
-    /// This command is used to request telemetry items regarding various
-    /// reset conditions
-    ///
-    /// # Arguments
-    /// `telem_type` - Variant of [`ResetTelemetry::Type`] to request
-    ///
-    /// [`ResetTelemetry::Type`]: ./ResetTelemetry/enum.Type.html
-    fn get_reset_telemetry(
-        &self,
-        telem_type: telemetry::reset::Type,
-    ) -> CounterResult<u8> {
-        thread::sleep(INTER_COMMAND_DELAY);
-        let (command, rx_len) = telemetry::reset::command(telem_type);
-        telemetry::reset::parse(&self.connection.transfer(
-            command,
-            rx_len,
-            Duration::from_millis(3),
-        )?)
-    }
-
     /// Set Communications Watchdog Period
     ///
     /// The Communications Watchdog by default has a value of 4 minutes set as
@@ -227,47 +170,49 @@ impl CuavaRadiationCounter for RadiationCounter {
             Duration::from_millis(2),
         )?)
     }
-
-    /// Issue Raw Command
-    ///
-    /// This command sends a raw command to the Radiation Counter
-    fn raw_command(&self, cmd: u8, data: Vec<u8>) -> CounterResult<()> {
-        thread::sleep(INTER_COMMAND_DELAY);
-        self.connection.write(Command { cmd, data })?;
-        Ok(())
-    }
     
     /// Get Radiation Counter Value
     ///
-    /// This command uses i2c to get the value from the Radiation Counter
-    fn get_radiation_count(&mut self) -> CounterResult<(Duration, u8)> {
+    /// This command uses i2c to get the counter values from the Radiation Counter
+    fn get_radiation_count(&mut self) -> CounterResult<(u8, u8, u8)> {
         let count_request = Command {
             cmd: 0x01,
             data: vec![],
         };
         
-        let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 2, Duration::from_millis(3));
+        let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 3, Duration::from_millis(3));
         match count_result {
             Ok(count) => {
-                let reading = count[0];
-                let now: Duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-                self.timestamps.push(now.as_secs() as i32);
-                self.readings.push(reading as i32);
-                Ok((now, reading))
+                let reading1 = count[0];
+                let reading2 = count[1];
+                let reading3 = count[2];
+                self.cur_sum += reading1 as i32 + reading2 as i32 + reading3 as i32;
+                
+                Ok((reading1, reading2, reading3))
             },
             Err(e) => Err(e.into()),
         }
     }
     
     /// Get housekeeping data
-    fn get_housekeeping(&mut self) -> CounterResult<RCHk> {
+    ///
+    /// Returns the data required for housekeeping
+    fn get_housekeeping(&self) -> CounterResult<RCHk> {
         let data = RCHk {
-            timestamps: self.timestamps.clone(),
-            readings: self.readings.clone(),
+            timestamp: self.timestamp,
+            avg_sum_30s: self.sum_30s / NUM_COUNTERS,
+            prev_avg_sum_30s: self.prev_sum_30s / NUM_COUNTERS,
         };
-        // Remove readings once retrieved
-        self.timestamps.clear();
-        self.readings.clear();
         Ok(data)
+    }
+    
+    /// Swap 30 second blocks
+    ///
+    /// Indicate a new time period so the 30 second blocks are swapped and reset
+    fn swap_30s_block(&mut self, new_timestamp: i32) {
+        self.timestamp = new_timestamp - 30;
+        self.prev_sum_30s = self.sum_30s;
+        self.sum_30s = self.cur_sum;
+        self.cur_sum = 0;
     }
 }

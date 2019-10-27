@@ -1,5 +1,6 @@
 #[derive(Default)]
 pub struct RCHk {
-	pub timestamps:Vec<i32>,
-	pub readings:Vec<i32>,
+	pub timestamp:i32,
+	pub avg_sum_30s:i32,
+	pub prev_avg_sum_30s:i32,
 }
