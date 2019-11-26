@@ -2,4 +2,4 @@
 pub mod lib;
 
 pub mod reset;
-pub mod counter;
+//pub mod counter;

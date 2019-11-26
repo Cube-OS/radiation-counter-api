@@ -76,6 +76,9 @@ pub trait CuavaRadiationCounter {
 pub struct RadiationCounter {
     connection: Connection,
     timestamp: i32,
+    rc1_reading: i32,
+    rc2_reading:i32,
+    rc3_reading: i32,
     cur_sum: i32,
     sum_30s: i32,
     prev_sum_30s: i32,
@@ -94,6 +97,9 @@ impl RadiationCounter {
         RadiationCounter {
             connection: connection,
             timestamp: 0,
+            rc1_reading: 0,
+            rc2_reading: 0,
+            rc3_reading: 0,
             cur_sum: 0,
             sum_30s: 0,
             prev_sum_30s: 0,
@@ -199,6 +205,9 @@ impl CuavaRadiationCounter for RadiationCounter {
     /// Returns the data required for housekeeping
     fn get_housekeeping(&self) -> CounterResult<RCHk> {
         let data = RCHk {
+            rc1_reading: self.rc1_reading,
+            rc2_reading: self.rc2_reading,
+            rc3_reading: self.rc3_reading,
             timestamp: self.timestamp,
             avg_sum_30s: self.sum_30s / NUM_COUNTERS,
             prev_avg_sum_30s: self.prev_sum_30s / NUM_COUNTERS,

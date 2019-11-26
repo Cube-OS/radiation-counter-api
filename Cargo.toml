@@ -1,10 +1,10 @@
 [package]
 name = "radiation-counter-api"
 version = "0.1.0"
-authors = ["BH Cho <byunghoon.cho@gmail.com>"]
+authors = ["BH Cho <byunghoon.cho@gmail.com>, XL Bai <xbai9225@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 failure = "0.1.2"
-rust-i2c = { path = "../../hal/rust-hal/rust-i2c" }
+rust-i2c = { path = "../../../kubos/hal/rust-hal/rust-i2c" }
 gomspace-p31u-api = { path = "../../apis/gomspace-p31u-api" }
