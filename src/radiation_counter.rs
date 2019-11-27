@@ -13,7 +13,7 @@ use std::io::Error;
 const INTER_COMMAND_DELAY: Duration = Duration::from_millis(60);
 
 // Number of radiation counters
-const NUM_COUNTERS: i32 = 3;
+//const NUM_COUNTERS: i32 = 3;
 
 /// Trait defining expected functionality for CUAVA Radiation Counter
 pub trait CuavaRadiationCounter {
@@ -58,7 +58,7 @@ pub trait CuavaRadiationCounter {
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the value from the Radiation Counter
-    fn get_radiation_count(&mut self) -> CounterResult<(u8, u8, u8)>;
+    fn get_radiation_count(&mut self) -> CounterResult<(u16, u16, u16)>;
     
     /// Get housekeeping data
     ///
@@ -180,20 +180,27 @@ impl CuavaRadiationCounter for RadiationCounter {
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the counter values from the Radiation Counter
-    fn get_radiation_count(&mut self) -> CounterResult<(u8, u8, u8)> {
+    fn get_radiation_count(&mut self) -> CounterResult<(u16, u16, u16)> {
         let count_request = Command {
             cmd: 0x01,
             data: vec![],
         };
         
-        let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 3, Duration::from_millis(3));
+        let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 6, Duration::from_millis(3));
         match count_result {
             Ok(count) => {
-                let reading1 = count[0];
-                let reading2 = count[1];
-                let reading3 = count[2];
-                self.cur_sum += reading1 as i32 + reading2 as i32 + reading3 as i32;
-                
+                let reading1 = (count[0] as u16)<<8 | (count[1] as u16);
+                let reading2 = (count[2] as u16)<<8 | (count[3] as u16);
+                let reading3 = (count[4] as u16)<<8 | (count[5] as u16);        
+                // let reading1 = count[0] as u16;
+                // let reading2 = count[1] as u16;
+                // let reading3 = count[2] as u16;
+                self.rc1_reading = reading1 as i32;
+                self.rc2_reading = reading2 as i32;
+                self.rc3_reading = reading3 as i32;
+                //self.cur_sum += reading1 as i32 + reading2 as i32 + reading3 as i32;
+                self.cur_sum += self.rc1_reading+ self.rc2_reading + self.rc3_reading;
+
                 Ok((reading1, reading2, reading3))
             },
             Err(e) => Err(e.into()),
@@ -209,8 +216,8 @@ impl CuavaRadiationCounter for RadiationCounter {
             rc2_reading: self.rc2_reading,
             rc3_reading: self.rc3_reading,
             timestamp: self.timestamp,
-            avg_sum_30s: self.sum_30s / NUM_COUNTERS,
-            prev_avg_sum_30s: self.prev_sum_30s / NUM_COUNTERS,
+            sum_30s: self.sum_30s,
+            prev_sum_30s: self.prev_sum_30s,
         };
         Ok(data)
     }
