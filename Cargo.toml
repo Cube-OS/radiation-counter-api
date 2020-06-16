@@ -7,4 +7,3 @@ edition = "2018"
 [dependencies]
 failure = "0.1.2"
 rust-i2c = { path = "../../../kubos/hal/rust-hal/rust-i2c" }
-gomspace-p31u-api = { path = "../../apis/gomspace-p31u-api" }
