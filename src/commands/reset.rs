@@ -14,19 +14,3 @@ pub mod manual_reset {
         }
     }
 }
-
-/// Reset Communications Watchdog
-///
-/// Any valid command will reset the communications watchdog timer. If the user
-/// does not require any telemetry from the board, this command can be sent
-/// to reset the communications watchdog.
-pub mod reset_comms_watchdog {
-    use super::*;
-
-    pub fn command() -> Command {
-        Command {
-            cmd: 0x22,
-            data: vec![0x00],
-        }
-    }
-}
