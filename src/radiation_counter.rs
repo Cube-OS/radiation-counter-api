@@ -101,15 +101,16 @@ impl CuavaRadiationCounter for RadiationCounter {
             data: vec![0x00],
         };
 
-        let ping_result: Result<Vec<u8>, Error> = self.connection.read(ping_request, 1);
-        let pong: u8 = ping_result.unwrap_or_default()[0];
+        let ping_result: Vec<u8> = self.connection.read(ping_request, 1)?;
 
-        if pong == 25 {
-            Ok(())
-        } else {
+
+
+        if ping_result.is_empty() || ping_result[0] != 25 {
             Err(CounterError::CommandFailure {
                 command: String::from("Test Ping"),
             })
+        } else {
+            Ok(())
         }
 
     }
