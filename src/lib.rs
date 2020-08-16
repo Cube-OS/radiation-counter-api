@@ -4,7 +4,7 @@ mod radiation_counter;
 /// High level Radiation Counter API functions
 
 use failure::Fail;
-use std::error::Error;
+// use std::error::Error;
 use std::io;
 
 /// CounterError

@@ -1,5 +1,5 @@
 use crate::commands::*;
-use crate::CounterResult;
+use crate::{CounterResult,CounterError};
 use rust_i2c::{Command, Connection};
 use std::io::Error;
 use std::thread;
@@ -20,6 +20,11 @@ pub trait CuavaRadiationCounter {
     /// If required the user can reset the radiation counter.
     /// This will increment the Manual Reset Counter.
     fn manual_reset(&self) -> CounterResult<()>;
+
+    /// Test Ping
+    /// 
+    /// Ping the ESP by reading from a specific I2C register
+    fn test_ping(&self) -> CounterResult<()>;
 
     /// Control Rasperry Pi power
     /// 
@@ -88,6 +93,25 @@ impl CuavaRadiationCounter for RadiationCounter {
         thread::sleep(INTER_COMMAND_DELAY);
         self.connection.write(manual_reset::command())?;
         Ok(())
+    }
+
+    fn test_ping(&self) -> CounterResult<()> {
+        let ping_request = Command {
+            cmd: 0x3A,
+            data: vec![0x00],
+        };
+
+        let ping_result: Result<Vec<u8>, Error> = self.connection.read(ping_request, 1);
+        let pong: u8 = ping_result.unwrap_or_default()[0];
+
+        if pong == 25 {
+            Ok(())
+        } else {
+            Err(CounterError::CommandFailure {
+                command: String::from("Test Ping"),
+            })
+        }
+
     }
 
     fn rpi_power(&self, state:bool) -> CounterResult<()> {
