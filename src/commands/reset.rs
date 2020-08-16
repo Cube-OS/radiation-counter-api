@@ -9,7 +9,7 @@ pub mod manual_reset {
 
     pub fn command() -> Command {
         Command {
-            cmd: 0x80,
+            cmd: 0x03,
             data: vec![0x00],
         }
     }

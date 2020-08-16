@@ -55,7 +55,8 @@ impl From<io::Error> for CounterError {
     fn from(error: std::io::Error) -> Self {
         CounterError::IoError {
             cause: error.kind(),
-            description: error.description().to_owned(),
+            // description: error.description().to_owned(),
+            description: error.to_string(), // Potential fix for warning
         }
     }
 }
