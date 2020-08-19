@@ -1,5 +1,5 @@
 use crate::commands::*;
-use crate::CounterResult;
+use crate::{CounterResult,CounterError};
 use rust_i2c::{Command, Connection};
 use std::io::Error;
 use std::thread;
@@ -9,6 +9,10 @@ use std::time::Duration;
 // Rounding up to an even 60
 const INTER_COMMAND_DELAY: Duration = Duration::from_millis(60);
 
+// Delay to allow for Rasperry Pi power up sequence without interference
+const PI_POWER_DELAY: Duration = Duration::from_millis(500);
+
+
 /// Trait defining expected functionality for CUAVA Radiation Counter
 pub trait CuavaRadiationCounter {
     /// Manual Reset
@@ -16,6 +20,16 @@ pub trait CuavaRadiationCounter {
     /// If required the user can reset the radiation counter.
     /// This will increment the Manual Reset Counter.
     fn manual_reset(&self) -> CounterResult<()>;
+
+    /// Test Ping
+    /// 
+    /// Ping the ESP by reading from a specific I2C register
+    fn test_ping(&self) -> CounterResult<()>;
+
+    /// Control Rasperry Pi power
+    /// 
+    /// This will turn on/off power to the radiation counter Rasperry Pi
+    fn rpi_power(&self, state : bool) -> CounterResult<()>;
 
     /// Get Radiation Counter Value
     ///
@@ -60,7 +74,7 @@ impl RadiationCounter {
     /// [`Connection`]: ../rust_i2c/struct.Connection.html
     pub fn new(connection: Connection) -> Self {
         RadiationCounter {
-            connection: connection,
+            connection,
             rc1_reading: 0,
             rc2_reading: 0,
             rc3_reading: 0,
@@ -78,6 +92,48 @@ impl CuavaRadiationCounter for RadiationCounter {
     fn manual_reset(&self) -> CounterResult<()> {
         thread::sleep(INTER_COMMAND_DELAY);
         self.connection.write(manual_reset::command())?;
+        Ok(())
+    }
+
+    fn test_ping(&self) -> CounterResult<()> {
+        let ping_request = Command {
+            cmd: 0x3A,
+            data: vec![0x00],
+        };
+
+        let ping_result: Vec<u8> = self.connection.read(ping_request, 1)?;
+
+
+
+        if ping_result.is_empty() || ping_result[0] != 25 {
+            Err(CounterError::CommandFailure {
+                command: String::from("Test Ping"),
+            })
+        } else {
+            Ok(())
+        }
+
+    }
+
+    fn rpi_power(&self, state:bool) -> CounterResult<()> {
+        let rpi_on = Command {
+            cmd: 0x05,
+            data: vec![0x00],
+        };
+        let rpi_off = Command {
+            cmd: 0x18,
+            data: vec![0x00],
+        };
+
+        thread::sleep(INTER_COMMAND_DELAY);
+
+        if state {
+            self.connection.write(rpi_on)?;
+        } else {
+            self.connection.write(rpi_off)?;
+        }
+
+        thread::sleep(PI_POWER_DELAY);
         Ok(())
     }
 
