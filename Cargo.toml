@@ -7,6 +7,6 @@ edition = "2018"
 [dependencies]
 failure = "0.1.2"
 
-rust-i2c = { path = "../../../kubos/hal/rust-hal/rust-i2c" }
+rust-i2c = { git = "https://github.com/Cube-OS/rust-i2c" }
 # rust-i2c = { path = "../kubos/hal/rust-hal/rust-i2c" }
 
