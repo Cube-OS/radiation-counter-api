@@ -207,6 +207,16 @@ impl CuavaRadiationCounter for RadiationCounter {
         }
     }
     
+    /// Swap 30 second blocks
+    ///
+    /// Indicate a new time period so the 30 second blocks are swapped and reset
+    fn swap_30s_block(&mut self, new_timestamp: i32) {
+        self.timestamp = new_timestamp - 30;
+        self.prev_sum_30s = self.sum_30s;
+        self.sum_30s = self.cur_sum;
+        self.cur_sum = 0;
+    } 
+      
     /// Get housekeeping data
     ///
     /// Returns the data required for housekeeping
@@ -220,15 +230,5 @@ impl CuavaRadiationCounter for RadiationCounter {
             prev_sum_30s: self.prev_sum_30s,
         };
         Ok(data)
-    }
-    
-    /// Swap 30 second blocks
-    ///
-    /// Indicate a new time period so the 30 second blocks are swapped and reset
-    fn swap_30s_block(&mut self, new_timestamp: i32) {
-        self.timestamp = new_timestamp - 30;
-        self.prev_sum_30s = self.sum_30s;
-        self.sum_30s = self.cur_sum;
-        self.cur_sum = 0;
     }
 }

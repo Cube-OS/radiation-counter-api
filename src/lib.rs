@@ -9,26 +9,22 @@ mod objects;
 /// High level Radiation Counter API functions
 
 use failure::Fail;
-use std::error::Error;
+// use std::error::Error;
 use std::io;
+use cubeos_error::Error;
 
 /// CounterError
 ///
 /// Describes various errors which may result from using Radiation Counter APIs
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Fail, Clone, PartialEq)]
 #[fail(display = "Radiation Counter Error")]
 pub enum CounterError {
     /// Generic error condition
     #[fail(display = "Generic Error")]
     GenericError,
     /// Error resulting from underlying Io functions
-    #[fail(display = "IO Error: {}", description)]
-    IoError {
-        /// Underlying cause captured from io function
-        cause: std::io::ErrorKind,
-        /// Error description
-        description: String,
-    },
+    #[fail(display = "IO Error")]
+    IoError,
     /// Error resulting from receiving invalid data from radiation counter
     #[fail(display = "Parsing failed: {}", source)]
     ParsingFailure {
@@ -55,26 +51,29 @@ impl CounterError {
     }
 }
 
-// impl From<gomspace_p31u_api::EpsError> for CounterError {
-//     fn from(error: gomspace_p31u_api::EpsError) -> Self {
-//         match error {
-//             gomspace_p31u_api::EpsError::GenericError => CounterError::GenericError,
-//             gomspace_p31u_api::EpsError::IoError{cause,description} => CounterError::IoError{cause,description},
-//             gomspace_p31u_api::EpsError::ConfigError => CounterError::GenericError,
-//             gomspace_p31u_api::EpsError::CommandFailure{command} => CounterError::CommandFailure{command},
-//         }
-//     }
-// }
 
 /// Convience converter from io::Error to CounterError
 impl From<io::Error> for CounterError {
-    fn from(error: std::io::Error) -> Self {
-        CounterError::IoError {
-            cause: error.kind(),
-            description: error.description().to_owned(),
-        }
+    fn from(_error: std::io::Error) -> Self {
+        CounterError::IoError 
+        // {
+        //     cause: error.kind(),
+        //  //   description: error.description().to_owned(),
+        // }
     }
 }
+
+impl From<CounterError> for cubeos_error::Error {
+    fn from(e: CounterError) -> cubeos_error::Error {
+        match e {
+            CounterError::GenericError => cubeos_error::Error::ServiceError(0),
+            CounterError::IoError => cubeos_error::Error::from(e),
+            CounterError::ParsingFailure{source} =>cubeos_error::Error::Failure(source),
+            CounterError::CommandFailure{command} =>cubeos_error::Error::Failure(command),            
+        }  
+    }
+}
+
 
 /// Universal return type for Radiation Counter api functions
 pub type CounterResult<T> = Result<T, CounterError>;
