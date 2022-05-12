@@ -195,11 +195,11 @@ impl CuavaRadiationCounter for RadiationCounter {
                 // let reading1 = count[0] as u16;
                 // let reading2 = count[1] as u16;
                 // let reading3 = count[2] as u16;
-                self.rc1_reading = reading1 as i32;
-                self.rc2_reading = reading2 as i32;
-                self.rc3_reading = reading3 as i32;
+                // self.rc1_reading = reading1 as i32;
+                // self.rc2_reading = reading2 as i32;
+                // self.rc3_reading = reading3 as i32;
                 //self.cur_sum += reading1 as i32 + reading2 as i32 + reading3 as i32;
-                self.cur_sum += self.rc1_reading+ self.rc2_reading + self.rc3_reading;
+                // self.cur_sum += self.rc1_reading+ self.rc2_reading + self.rc3_reading;
 
                 Ok((reading1, reading2, reading3))
             },
