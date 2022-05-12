@@ -1,5 +1,7 @@
 use crate::{CounterError, CounterResult};
 use rust_i2c::Command;
+use failure::{Fail};
+use serde::*;
 
 /// Last Error
 ///
@@ -9,7 +11,7 @@ use rust_i2c::Command;
 /// the 2 byte code of the last error generated.
 
 /// Possible last error values
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize,Deserialize)]
 pub enum ErrorCode {
     /// No error was encountered
     None = 0x00,
