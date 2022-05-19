@@ -9,9 +9,8 @@ mod objects;
 /// High level Radiation Counter API functions
 
 use failure::Fail;
-// use std::error::Error;
 use std::io;
-use cubeos_error::Error;
+// use cubeos_error::Error;
 
 /// CounterError
 ///
@@ -56,10 +55,6 @@ impl CounterError {
 impl From<io::Error> for CounterError {
     fn from(_error: std::io::Error) -> Self {
         CounterError::IoError 
-        // {
-        //     cause: error.kind(),
-        //  //   description: error.description().to_owned(),
-        // }
     }
 }
 
@@ -78,10 +73,7 @@ impl From<CounterError> for cubeos_error::Error {
 /// Universal return type for Radiation Counter api functions
 pub type CounterResult<T> = Result<T, CounterError>;
 
-
 /// Low level interface for interacting with the radiation counter
-
 pub use crate::commands::last_error::{ErrorCode};
 pub use crate::radiation_counter::{CuavaRadiationCounter, RadiationCounter};
 pub use crate::telemetry::reset as ResetTelemetry;
-//pub use crate::telemetry::counter as CounterTelemetry;

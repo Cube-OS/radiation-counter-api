@@ -1,6 +1,6 @@
 use crate::{CounterError, CounterResult};
 use rust_i2c::Command;
-use failure::{Fail};
+// use failure::{Fail};
 use serde::*;
 
 /// Last Error
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_parse() {
         assert_eq!(
-            ErrorCode::BadCounterID,
+            ErrorCode::CommandError,
             parse(&vec![0x00, 0x02]).unwrap()
         );
     }
