@@ -10,7 +10,8 @@ mod objects;
 
 use failure::Fail;
 use std::io;
-// use cubeos_error::Error;
+
+pub use crate::objects::*;
 
 /// CounterError
 ///
