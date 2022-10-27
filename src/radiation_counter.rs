@@ -58,30 +58,16 @@ pub trait CuavaRadiationCounter {
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the value from the Radiation Counter
-    fn get_radiation_count(&mut self) -> CounterResult<(u16, u16, u16)>;
-    
-    /// Get housekeeping data
-    ///
-    /// Returns the data required for housekeeping
-    fn get_housekeeping(&self) -> CounterResult<RCHk>;
-    
-    /// Swap 30 second blocks
-    ///
-    /// Indicate a new time period so the 30 second blocks are swapped and reset
-    fn swap_30s_block(&mut self, new_timestamp: i32);
+    fn get_radiation_count(&mut self) -> CounterResult<RCHk>;
 }
 
 /// Radiation Counter structure containing low level connection and functionality
 /// required for commanding and requesting telemetry from the radiation counter device.
 pub struct RadiationCounter {
     connection: Connection,
-    timestamp: i32,
-    rc1_reading: i32,
-    rc2_reading:i32,
-    rc3_reading: i32,
-    cur_sum: i32,
-    sum_30s: i32,
-    prev_sum_30s: i32,
+    rc1_reading: i16,
+    rc2_reading: i16,
+    rc3_reading: i16,
 }
 
 impl RadiationCounter {
@@ -96,13 +82,9 @@ impl RadiationCounter {
     pub fn new(connection: Connection) -> Self {
         RadiationCounter {
             connection: connection,
-            timestamp: 0,
             rc1_reading: 0,
             rc2_reading: 0,
             rc3_reading: 0,
-            cur_sum: 0,
-            sum_30s: 0,
-            prev_sum_30s: 0,
         }
     }
 }
@@ -180,7 +162,7 @@ impl CuavaRadiationCounter for RadiationCounter {
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the counter values from the Radiation Counter
-    fn get_radiation_count(&mut self) -> CounterResult<(u16, u16, u16)> {
+    fn get_radiation_count(&mut self) -> CounterResult<RCHk> {
         let count_request = Command {
             cmd: 0x01,
             data: vec![],
@@ -189,46 +171,44 @@ impl CuavaRadiationCounter for RadiationCounter {
         let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 6, Duration::from_millis(3));
         match count_result {
             Ok(count) => {
-                let reading1 = (count[0] as u16)<<8 | (count[1] as u16);
-                let reading2 = (count[2] as u16)<<8 | (count[3] as u16);
-                let reading3 = (count[4] as u16)<<8 | (count[5] as u16);        
+                let reading1 = (count[0] as i16)<<8 | (count[1] as i16);
+                let reading2 = (count[2] as i16)<<8 | (count[3] as i16);
+                let reading3 = (count[4] as i16)<<8 | (count[5] as i16);        
                 // let reading1 = count[0] as u16;
                 // let reading2 = count[1] as u16;
                 // let reading3 = count[2] as u16;
-                self.rc1_reading = reading1 as i32;
-                self.rc2_reading = reading2 as i32;
-                self.rc3_reading = reading3 as i32;
+                self.rc1_reading = reading1;
+                self.rc2_reading = reading2;
+                self.rc3_reading = reading3;
                 //self.cur_sum += reading1 as i32 + reading2 as i32 + reading3 as i32;
-                self.cur_sum += self.rc1_reading+ self.rc2_reading + self.rc3_reading;
-
-                Ok((reading1, reading2, reading3))
+                // self.cur_sum += self.rc1_reading+ self.rc2_reading + self.rc3_reading;
+                let data = RCHk {
+                    rc1_reading: self.rc1_reading,
+                    rc2_reading: self.rc2_reading,
+                    rc3_reading: self.rc3_reading,
+                };
+                Ok(data)
             },
             Err(e) => Err(e.into()),
         }
     }
     
-    /// Get housekeeping data
-    ///
-    /// Returns the data required for housekeeping
-    fn get_housekeeping(&self) -> CounterResult<RCHk> {
-        let data = RCHk {
-            rc1_reading: self.rc1_reading,
-            rc2_reading: self.rc2_reading,
-            rc3_reading: self.rc3_reading,
-            timestamp: self.timestamp,
-            sum_30s: self.sum_30s,
-            prev_sum_30s: self.prev_sum_30s,
-        };
-        Ok(data)
-    }
-    
-    /// Swap 30 second blocks
-    ///
-    /// Indicate a new time period so the 30 second blocks are swapped and reset
-    fn swap_30s_block(&mut self, new_timestamp: i32) {
-        self.timestamp = new_timestamp - 30;
-        self.prev_sum_30s = self.sum_30s;
-        self.sum_30s = self.cur_sum;
-        self.cur_sum = 0;
-    }
+    // fn swap_30s_block(&mut self, new_timestamp: i32) {
+    //     self.timestamp = new_timestamp - 30;
+    //     self.prev_sum_30s = self.sum_30s;
+    //     self.sum_30s = self.cur_sum;
+    //     self.cur_sum = 0;
+    // } 
+      
+    // fn get_housekeeping(&self) -> CounterResult<RCHk> {
+    //     let data = RCHk {
+    //         rc1_reading: self.rc1_reading,
+    //         rc2_reading: self.rc2_reading,
+    //         rc3_reading: self.rc3_reading,
+    //         timestamp: self.timestamp,
+    //         sum_30s: self.sum_30s,
+    //         prev_sum_30s: self.prev_sum_30s,
+    //     };
+    //     Ok(data)
+    // }
 }
