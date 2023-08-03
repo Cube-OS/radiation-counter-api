@@ -2,14 +2,16 @@
 // #![deny(warnings)]
 
 mod commands;
+mod objects;
 mod radiation_counter;
 mod telemetry;
-mod objects;
 
 /// High level Radiation Counter API functions
-
+use cubeos_service::*;
+use cubeos_service::{Error};
 use failure::Fail;
-use std::io;
+
+use std::convert::From;
 
 pub use crate::objects::*;
 
@@ -19,12 +21,15 @@ pub use crate::objects::*;
 #[derive(Debug, Fail, Clone, PartialEq)]
 #[fail(display = "Radiation Counter Error")]
 pub enum CounterError {
+    /// None
+    #[fail(display = "None")]
+    None,
     /// Generic error condition
     #[fail(display = "Generic Error")]
     GenericError,
     /// Error resulting from underlying Io functions
-    #[fail(display = "IO Error")]
-    IoError,
+    #[fail(display = "I2C Error")]
+    I2CError(std::io::ErrorKind),
     /// Error resulting from receiving invalid data from radiation counter
     #[fail(display = "Parsing failed: {}", source)]
     ParsingFailure {
@@ -51,30 +56,39 @@ impl CounterError {
     }
 }
 
-
-/// Convience converter from io::Error to CounterError
-impl From<io::Error> for CounterError {
-    fn from(_error: std::io::Error) -> Self {
-        CounterError::IoError 
-    }
-}
-
-impl From<CounterError> for cubeos_error::Error {
-    fn from(e: CounterError) -> cubeos_error::Error {
+impl From<CounterError> for Error {
+    fn from(e: CounterError) -> Error {
         match e {
-            CounterError::GenericError => cubeos_error::Error::ServiceError(0),
-            CounterError::IoError => cubeos_error::Error::from(e),
-            CounterError::ParsingFailure{source} =>cubeos_error::Error::Failure(source),
-            CounterError::CommandFailure{command} =>cubeos_error::Error::Failure(command),            
-        }  
+            CounterError::None => Error::ServiceError(0),
+            CounterError::GenericError => Error::ServiceError(1),
+            CounterError::I2CError(io) => Error::from(io),
+            CounterError::ParsingFailure { source } => Error::Failure(source),
+            CounterError::CommandFailure { command } => Error::Failure(command),
+        }
     }
 }
 
+impl From<std::io::Error> for CounterError {
+    fn from(error: std::io::Error) -> Self {
+        CounterError::I2CError(error.kind())
+    }
+}
+
+impl From<Error> for CounterError {
+    fn from(err: Error) -> CounterError {
+        match err {
+            Error::ServiceError(0) => CounterError::None,
+            Error::ServiceError(1) => CounterError::GenericError,
+            Error::ServiceError(2) => CounterError::I2CError(std::io::ErrorKind::Other),
+            _ => CounterError::GenericError, // or return a default error variant
+        }
+    }
+}
 
 /// Universal return type for Radiation Counter api functions
-pub type CounterResult<T> = Result<T, CounterError>;
+pub type CounterResult<T> = core::result::Result<T, CounterError>;
 
 /// Low level interface for interacting with the radiation counter
-pub use crate::commands::last_error::{ErrorCode};
+pub use crate::commands::last_error::ErrorCode;
 pub use crate::radiation_counter::{CuavaRadiationCounter, RadiationCounter};
 pub use crate::telemetry::reset as ResetTelemetry;

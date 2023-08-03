@@ -1,4 +1,5 @@
-use rust_i2c::Command;
+// use rust_i2c::Command;
+use i2c_rs::Command;
 
 /// Sends a reset command to the radiation counter
 ///

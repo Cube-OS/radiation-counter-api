@@ -1,12 +1,12 @@
 use crate::commands::*;
 // use crate::telemetry;
-use crate::CounterResult;
 use crate::objects::RCHk;
-use rust_i2c::{Command, Connection};
+use crate::CounterResult;
+use i2c_rs::{Command, Connection};
 use std::thread;
 // use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::time::Duration;
 use std::io::Error;
+use std::time::Duration;
 
 // Observed (but undocumented) inter-command delay required is 59ms
 // Rounding up to an even 60
@@ -22,7 +22,7 @@ pub trait CuavaRadiationCounter {
     /// If an error has been generated after attempting to execute a user's command,
     /// this command can be used to retrieve details about the error.
     fn get_last_error(&self) -> CounterResult<last_error::ErrorCode>;
-    
+
     /// Manual Reset
     ///
     /// If required the user can reset the radiation counter.
@@ -35,7 +35,7 @@ pub trait CuavaRadiationCounter {
     /// does not require any telemetry from the board, this command can be sent
     /// to reset the communications watchdog.
     fn reset_comms_watchdog(&self) -> CounterResult<()>;
-    
+
     /// Set Communications Watchdog Period
     ///
     /// The Communications Watchdog by default has a value of 4 minutes set as
@@ -48,13 +48,13 @@ pub trait CuavaRadiationCounter {
     /// # Arguments
     /// `period` - Watchdog period to set in minutes
     fn set_comms_watchdog_period(&self, period: u8) -> CounterResult<()>;
-    
+
     /// Get Communications Watchdog Period
     ///
     /// This command provides the user with the current communications watchdog
     /// timeout that has been set. The returned value is indicated in minutes.
     fn get_comms_watchdog_period(&self) -> CounterResult<u8>;
-    
+
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the value from the Radiation Counter
@@ -126,7 +126,7 @@ impl CuavaRadiationCounter for RadiationCounter {
         self.connection.write(reset_comms_watchdog::command())?;
         Ok(())
     }
-    
+
     /// Set Communications Watchdog Period
     ///
     /// The Communications Watchdog by default has a value of 4 minutes set as
@@ -158,7 +158,7 @@ impl CuavaRadiationCounter for RadiationCounter {
             Duration::from_millis(2),
         )?)
     }
-    
+
     /// Get Radiation Counter Value
     ///
     /// This command uses i2c to get the counter values from the Radiation Counter
@@ -167,13 +167,15 @@ impl CuavaRadiationCounter for RadiationCounter {
             cmd: 0x01,
             data: vec![],
         };
-        
-        let count_result: Result<Vec<u8>, Error> = self.connection.transfer(count_request, 6, Duration::from_millis(3));
+
+        let count_result: Result<Vec<u8>, Error> =
+            self.connection
+                .transfer(count_request, 6, Duration::from_millis(3));
         match count_result {
             Ok(count) => {
-                let reading1 = (count[0] as i16)<<8 | (count[1] as i16);
-                let reading2 = (count[2] as i16)<<8 | (count[3] as i16);
-                let reading3 = (count[4] as i16)<<8 | (count[5] as i16);        
+                let reading1 = (count[0] as i16) << 8 | (count[1] as i16);
+                let reading2 = (count[2] as i16) << 8 | (count[3] as i16);
+                let reading3 = (count[4] as i16) << 8 | (count[5] as i16);
                 // let reading1 = count[0] as u16;
                 // let reading2 = count[1] as u16;
                 // let reading3 = count[2] as u16;
@@ -188,18 +190,18 @@ impl CuavaRadiationCounter for RadiationCounter {
                     rc3_reading: self.rc3_reading,
                 };
                 Ok(data)
-            },
+            }
             Err(e) => Err(e.into()),
         }
     }
-    
+
     // fn swap_30s_block(&mut self, new_timestamp: i32) {
     //     self.timestamp = new_timestamp - 30;
     //     self.prev_sum_30s = self.sum_30s;
     //     self.sum_30s = self.cur_sum;
     //     self.cur_sum = 0;
-    // } 
-      
+    // }
+
     // fn get_housekeeping(&self) -> CounterResult<RCHk> {
     //     let data = RCHk {
     //         rc1_reading: self.rc1_reading,

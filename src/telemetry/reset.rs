@@ -7,7 +7,8 @@
 //! and the `command` function.
 
 use crate::{CounterError, CounterResult};
-use rust_i2c::Command;
+use i2c_rs::Command;
+// use rust_i2c::Command;
 
 /// Macro for generating `ResetType` enum and `command` function
 /// for reset telemetry items.
@@ -108,10 +109,7 @@ mod tests {
     #[test]
     fn test_parse() {
         let input = vec![0x0, 0x1];
-        assert_eq!(
-            parse(&input),
-            Ok(1)
-        );
+        assert_eq!(parse(&input), Ok(1));
     }
 
     #[test]

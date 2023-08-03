@@ -1,5 +1,6 @@
 use crate::{CounterError, CounterResult};
-use rust_i2c::Command;
+// use rust_i2c::Command;
+use i2c_rs::Command;
 
 /// Set Communications Watchdog Period
 ///

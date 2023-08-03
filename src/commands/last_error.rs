@@ -1,5 +1,6 @@
 use crate::{CounterError, CounterResult};
-use rust_i2c::Command;
+// use rust_i2c::Command;
+use i2c_rs::Command;
 // use failure::{Fail};
 use serde::*;
 
@@ -11,7 +12,7 @@ use serde::*;
 /// the 2 byte code of the last error generated.
 
 /// Possible last error values
-#[derive(Clone, Debug, Eq, PartialEq, Serialize,Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ErrorCode {
     /// No error was encountered
     None = 0x00,
@@ -61,10 +62,7 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        assert_eq!(
-            ErrorCode::CommandError,
-            parse(&vec![0x00, 0x02]).unwrap()
-        );
+        assert_eq!(ErrorCode::CommandError, parse(&vec![0x00, 0x02]).unwrap());
     }
 
     #[test]
