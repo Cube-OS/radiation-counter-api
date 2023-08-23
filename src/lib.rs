@@ -7,7 +7,6 @@ mod radiation_counter;
 mod telemetry;
 
 /// High level Radiation Counter API functions
-use cubeos_service::*;
 use cubeos_service::{Error};
 use failure::Fail;
 

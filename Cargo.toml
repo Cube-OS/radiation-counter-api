@@ -7,10 +7,6 @@ edition = "2018"
 [dependencies]
 serde = "1.0"
 bincode = "1.0"
-juniper = "0.14.2"
 failure = "0.1.2"
 i2c-rs = { git = "ssh://git@github.com/Cube-OS/i2c-rs.git" }
-cubeos-service = { git = "ssh://git@github.com/Cube-OS/cubeos-service.git", feature = ["api"]}
-
-# rust-i2c = { git = "ssh://git@github.com/Cube-OS/i2c-rs.git" }
-# cubeos-error = { git = "ssh://git@github.com/Cube-OS/cubeos-error.git"}
+cubeos-service = { git = "ssh://git@github.com/Cube-OS/cubeos-service.git"}

@@ -1,10 +1,8 @@
 use crate::commands::*;
-// use crate::telemetry;
 use crate::objects::RCHk;
 use crate::CounterResult;
 use i2c_rs::{Command, Connection};
 use std::thread;
-// use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::io::Error;
 use std::time::Duration;
 
